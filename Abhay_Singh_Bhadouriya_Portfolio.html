@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Abhay Singh Bhadouriya - Personal Portfolio">
+<title>Abhay Singh Bhadouriya | Personal Portfolio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:Arial,Helvetica,sans-serif;color:#4b4f66;line-height:1.7;background:#fff}
+a{text-decoration:none;color:inherit}
+.container{width:min(1100px,92%);margin:auto}
+header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom:1px solid #e5e7ef}
+nav{height:70px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:27px;font-weight:800;color:#15162a}.logo b{color:#675df6}
+.links{display:flex;gap:25px;font-weight:600}.links a:hover{color:#675df6}
+.menu{display:none;background:none;border:0;font-size:28px}
+.hero{min-height:650px;display:flex;align-items:center;background:linear-gradient(135deg,#f7f7ff,#eef0ff)}
+.hero-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:60px;align-items:center}
+.label{color:#675df6;font-weight:800;letter-spacing:2px;font-size:13px}
+h1{font-size:clamp(40px,6vw,70px);line-height:1.12;color:#15162a;margin:12px 0}
+h1 span{color:#675df6}
+.hero h2{font-size:22px;color:#383b52;margin-bottom:15px}
+.hero p{max-width:650px}
+.buttons{display:flex;gap:14px;margin-top:25px}
+.btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:700;border:1px solid #675df6;cursor:pointer}
+.primary{background:#675df6;color:#fff}.secondary{color:#675df6;background:transparent}
+.profile{background:#fff;border-radius:24px;padding:35px;text-align:center;box-shadow:0 20px 50px #22254a1f}
+.circle{width:150px;height:150px;border-radius:50%;margin:auto auto 18px;display:grid;place-items:center;background:linear-gradient(135deg,#675df6,#9d92ff);color:#fff;font-size:48px;font-weight:800}
+.profile h3{color:#15162a;font-size:22px}.stats{display:flex;justify-content:space-around;margin-top:20px;padding-top:18px;border-top:1px solid #e5e7ef}.stats strong{display:block;color:#675df6;font-size:20px}.stats small{font-size:11px}
+section{padding:85px 0}.light{background:#f7f8fc}
+.title{font-size:42px;color:#15162a;margin:4px 0 30px}
+.about,.contact{display:grid;grid-template-columns:1fr 1fr;gap:55px}
+.info,.form{background:#fff;border:1px solid #e5e7ef;border-radius:17px;padding:25px}
+.info p{margin:7px 0}
+.skills,.projects{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:#fff;border:1px solid #e5e7ef;border-radius:16px;padding:24px;transition:.2s}
+.card:hover{transform:translateY(-5px);box-shadow:0 15px 30px #1e235014}
+.skill-icon{font-size:32px}.card h3{color:#15162a;margin:7px 0}
+.project-tech{color:#675df6;font-size:13px;font-weight:700;margin:12px 0}
+.contact-text{margin-bottom:20px}.details p{margin:8px 0}
+label{display:block;color:#15162a;font-weight:700;margin-bottom:14px}
+input,textarea{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #dfe2eb;border-radius:9px;font:inherit;outline:none}
+input:focus,textarea:focus{border-color:#675df6}
+button.btn{font:inherit}
+#status{margin-top:12px;font-weight:700;color:#675df6}
+footer{background:#15162a;color:#d8d9e4;padding:24px 0}
+.foot{display:flex;justify-content:space-between}
+@media(max-width:800px){
+.menu{display:block}.links{display:none;position:absolute;top:70px;left:0;width:100%;background:#fff;padding:20px 5%;flex-direction:column;border-bottom:1px solid #e5e7ef}.links.open{display:flex}
+.hero-grid,.about,.contact{grid-template-columns:1fr}.hero{padding:70px 0}.skills,.projects{grid-template-columns:1fr 1fr}
+}
+@media(max-width:550px){.skills,.projects{grid-template-columns:1fr}.buttons,.foot{flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+<nav class="container">
+<a class="logo" href="#home">Abhay Singh<span>.</span></a>
+<button class="menu" id="menu">☰</button>
+<div class="links" id="links">
+<a href="#home">Home</a><a href="#about">About</a><a href="#skills">Skills</a><a href="#projects">Projects</a><a href="#contact">Contact</a>
+</div>
+</nav>
+</header>
+
+<main>
+<section class="hero" id="home">
+<div class="container hero-grid">
+<div>
+<p class="label">WELCOME TO MY PORTFOLIO</p>
+<h1>Hi, I'm <span>Abhay Singh Bhadouriya</span></h1>
+<h2>B.Tech Student & Technology Enthusiast</h2>
+<p>I enjoy building websites, electronics projects, cloud-computing solutions and practical IoT applications. This portfolio presents my skills, projects and learning journey.</p>
+<div class="buttons"><a class="btn primary" href="#projects">View Projects</a><a class="btn secondary" href="#contact">Contact Me</a></div>
+</div>
+<div class="profile">
+<div class="circle">AB</div>
+<h3>Abhay Singh Bhadouriya</h3>
+<p>B.Tech Student</p>
+<div class="stats"><div><strong>3+</strong><small>Projects</small></div><div><strong>6+</strong><small>Skills</small></div><div><strong>100%</strong><small>Learning</small></div></div>
+</div>
+</div>
+</section>
+
+<section id="about">
+<div class="container">
+<p class="label">ABOUT ME</p><h2 class="title">Turning ideas into practical projects</h2>
+<div class="about">
+<div>
+<p>I am a B.Tech student interested in software development, cloud computing, embedded systems and IoT. I learn technologies by creating practical projects and solving real-world problems.</p>
+<p>My goal is to improve my programming and problem-solving skills and build useful technology solutions.</p>
+</div>
+<div class="info">
+<p><b>Education:</b> B.Tech</p><p><b>Interests:</b> Web Development, Cloud, IoT</p><p><b>Location:</b> India</p><p><b>Status:</b> Student</p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="light" id="skills">
+<div class="container">
+<p class="label">MY SKILLS</p><h2 class="title">Technologies I work with</h2>
+<div class="skills">
+<div class="card"><div class="skill-icon">🌐</div><h3>HTML & CSS</h3><p>Responsive and modern web interfaces.</p></div>
+<div class="card"><div class="skill-icon">⚡</div><h3>JavaScript</h3><p>Interactive and dynamic web functionality.</p></div>
+<div class="card"><div class="skill-icon">🟢</div><h3>Node.js</h3><p>Backend development and REST APIs.</p></div>
+<div class="card"><div class="skill-icon">🗄️</div><h3>MySQL</h3><p>Database concepts and data management.</p></div>
+<div class="card"><div class="skill-icon">☁️</div><h3>Cloud Computing</h3><p>Cloud concepts and deployment basics.</p></div>
+<div class="card"><div class="skill-icon">🔧</div><h3>Arduino & IoT</h3><p>Microcontrollers, sensors and automation.</p></div>
+</div>
+</div>
+</section>
+
+<section id="projects">
+<div class="container">
+<p class="label">MY WORK</p><h2 class="title">Featured Projects</h2>
+<div class="projects">
+<div class="card"><h3>Smart Street Light System</h3><p>Arduino-based automatic street-light project using IR sensors to control lights according to vehicle movement.</p><p class="project-tech">Arduino • C++ • IR Sensors</p></div>
+<div class="card"><h3>Smart Agriculture Monitoring</h3><p>IoT agriculture monitoring concept using sensors and LoRaWAN communication for collecting field data.</p><p class="project-tech">IoT • LoRaWAN • Sensors</p></div>
+<div class="card"><h3>Personal Portfolio Website</h3><p>Responsive portfolio website designed to showcase profile, technical skills, academic projects and contact information.</p><p class="project-tech">HTML • CSS • JavaScript</p></div>
+</div>
+</div>
+</section>
+
+<section class="light" id="contact">
+<div class="container contact">
+<div>
+<p class="label">CONTACT</p><h2 class="title">Let's connect</h2>
+<p class="contact-text">Have a project idea, feedback or learning opportunity? Send me a message using the form.</p>
+<div class="details"><p>📧 <b>Email:</b> your-email@example.com</p><p>📍 <b>Location:</b> India</p></div>
+</div>
+<form class="form" id="contactForm">
+<label>Name<input name="name" required placeholder="Your name"></label>
+<label>Email<input type="email" name="email" required placeholder="your@email.com"></label>
+<label>Message<textarea name="message" rows="5" required placeholder="Write your message..."></textarea></label>
+<button class="btn primary" type="submit">Send Message</button>
+<p id="status"></p>
+</form>
+</div>
+</section>
+</main>
+
+<footer><div class="container foot"><p>© 2026 Abhay Singh Bhadouriya. All rights reserved.</p><a href="#home">Back to top ↑</a></div></footer>
+
+<script>
+const menu=document.getElementById("menu"),links=document.getElementById("links");
+menu.onclick=()=>links.classList.toggle("open");
+document.querySelectorAll(".links a").forEach(a=>a.onclick=()=>links.classList.remove("open"));
+document.getElementById("contactForm").addEventListener("submit",function(e){
+e.preventDefault();
+const d=new FormData(this);
+const old=JSON.parse(localStorage.getItem("portfolioMessages")||"[]");
+old.push({name:d.get("name"),email:d.get("email"),message:d.get("message"),date:new Date().toLocaleString()});
+localStorage.setItem("portfolioMessages",JSON.stringify(old));
+document.getElementById("status").textContent="Message saved successfully! Thank you.";
+this.reset();
+});
+</script>
+</body>
+</html>
