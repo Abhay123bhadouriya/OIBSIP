@@ -1,0 +1,626 @@
+THIRABLOG — FULL SOURCE CODE
+
+================================================================================
+FILE: .env.example
+================================================================================
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017/thirablog
+JWT_SECRET=change_this_to_a_long_random_secret
+
+================================================================================
+FILE: .gitignore
+================================================================================
+node_modules/
+.env
+.DS_Store
+npm-debug.log*
+
+================================================================================
+FILE: README.md
+================================================================================
+# ThiraBlog — Blog Platform with Comments
+
+Full-stack assignment project based on the ThiraNex task.
+
+## Features
+- User registration, login and JWT authentication
+- Create, edit and delete your own blog posts
+- Post search
+- Individual post detail page
+- Comment section
+- Add and delete your own comments
+- RESTful backend APIs
+- MongoDB database integration
+- Responsive modern UI
+
+## Stack
+Frontend: HTML, CSS, JavaScript
+Backend: Node.js, Express
+Database: MongoDB + Mongoose
+Authentication: JWT + bcrypt
+
+## Run
+1. Install Node.js and MongoDB.
+2. Copy `.env.example` to `.env`.
+3. Update `MONGODB_URI` if needed.
+4. Run `npm install`.
+5. Run `npm run seed`.
+6. Run `npm start`.
+7. Open http://localhost:5000
+
+## Demo accounts
+User: user@thirablog.com / User@123
+Writer: writer@thirablog.com / Writer@123
+
+## GitHub
+Upload all files except `.env` and `node_modules`.
+
+================================================================================
+FILE: docs/SUBMISSION.md
+================================================================================
+# ThiraNex Assignment 4 — Submission
+
+## Project
+Blog Platform with Comments
+
+## Implemented requirements
+- User registration, login and authentication
+- Create, edit and delete blog posts
+- Comment section for user interaction
+- RESTful APIs
+- MongoDB database integration
+- Responsive frontend
+
+## Suggested submission description
+"Developed a full-stack Blog Platform with Comments using HTML, CSS, JavaScript, Node.js, Express and MongoDB. Users can register and authenticate, create/edit/delete their own posts, search posts and interact through comments. The application uses RESTful APIs and persistent database storage."
+
+## Demo
+Run `npm install`, `npm run seed`, then `npm start`.
+
+================================================================================
+FILE: middleware/auth.js
+================================================================================
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+async function protect(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    if (!header.startsWith("Bearer ")) {
+      return res.status(401).json({ success:false, message:"Login required" });
+    }
+    const token = header.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select("-password");
+    if (!req.user) return res.status(401).json({ success:false, message:"User not found" });
+    next();
+  } catch {
+    res.status(401).json({ success:false, message:"Invalid or expired token" });
+  }
+}
+
+module.exports = { protect };
+
+================================================================================
+FILE: models/Comment.js
+================================================================================
+const mongoose = require("mongoose");
+
+const commentSchema = new mongoose.Schema({
+  post: { type: mongoose.Schema.Types.ObjectId, ref: "Post", required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  text: { type: String, required: true, trim: true }
+}, { timestamps: true });
+
+module.exports = mongoose.model("Comment", commentSchema);
+
+================================================================================
+FILE: models/Post.js
+================================================================================
+const mongoose = require("mongoose");
+
+const postSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  content: { type: String, required: true },
+  category: { type: String, default: "General", trim: true },
+  image: { type: String, default: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80" },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
+}, { timestamps: true });
+
+module.exports = mongoose.model("Post", postSchema);
+
+================================================================================
+FILE: models/User.js
+================================================================================
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true }
+}, { timestamps: true });
+
+module.exports = mongoose.model("User", userSchema);
+
+================================================================================
+FILE: package.json
+================================================================================
+{
+  "name": "thirablog",
+  "version": "1.0.0",
+  "description": "Full-stack Blog Platform with comments",
+  "main": "server.js",
+  "scripts": {"start": "node server.js", "dev": "nodemon server.js", "seed": "node seed.js"},
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.2"
+  },
+  "devDependencies": {"nodemon": "^3.1.7"}
+}
+================================================================================
+FILE: public/app.js
+================================================================================
+const API="/api";
+let token=localStorage.getItem("token")||"";
+let user=JSON.parse(localStorage.getItem("user")||"null");
+let authMode="login";
+let posts=[];
+
+const $=id=>document.getElementById(id);
+const escapeHtml=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const ago=d=>new Date(d).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
+
+async function api(path,opt={}){
+  const headers={"Content-Type":"application/json",...(opt.headers||{})};
+  if(token)headers.Authorization=`Bearer ${token}`;
+  const r=await fetch(API+path,{...opt,headers});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.message||"Request failed");
+  return d;
+}
+function toast(x){$("toast").textContent=x;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",2200)}
+function closeModal(id){$(id).classList.add("hidden")}
+function home(){ $("homePage").classList.remove("hidden");$("detailPage").classList.add("hidden");loadPosts() }
+function scrollToPosts(){document.querySelector(".content").scrollIntoView({behavior:"smooth"})}
+function refresh(){
+  $("loginBtn").classList.toggle("hidden",!!user);
+  $("logoutBtn").classList.toggle("hidden",!user);
+  $("writeBtn").classList.toggle("hidden",!user);
+  $("userBadge").classList.toggle("hidden",!user);
+  if(user)$("userBadge").textContent="Hi, "+user.name;
+}
+async function loadPosts(){
+  try{
+    const q=encodeURIComponent($("search")?.value||"");
+    const d=await api(`/posts${q?`?search=${q}`:""}`);
+    posts=d.posts;renderPosts();
+  }catch(e){toast(e.message)}
+}
+function renderPosts(){
+  const box=$("posts");
+  if(!posts.length){box.innerHTML='<div class="empty">No posts found.</div>';return}
+  box.innerHTML=posts.map(p=>{
+    const text=p.content.length>130?p.content.slice(0,130)+"…":p.content;
+    const own=user&&p.author&&String(p.author._id)===String(user.id);
+    return `<article class="post-card">
+      <img src="${p.image}" alt="${escapeHtml(p.title)}">
+      <div class="post-body">
+        <div class="category">${escapeHtml(p.category)}</div>
+        <h3>${escapeHtml(p.title)}</h3>
+        <div class="excerpt">${escapeHtml(text)}</div>
+        <div class="meta">By ${escapeHtml(p.author?.name||"Unknown")} • ${ago(p.createdAt)}</div>
+        <button class="read" onclick="openPost('${p._id}')">Read & Comment →</button>
+        ${own?`<div style="margin-top:12px"><button class="edit-link" onclick='editPost(${JSON.stringify(p)})'>Edit</button><button class="danger-link" onclick="deletePost('${p._id}')">Delete</button></div>`:""}
+      </div>
+    </article>`;
+  }).join("");
+}
+async function openPost(id){
+  try{
+    const d=await api(`/posts/${id}`);
+    $("homePage").classList.add("hidden");$("detailPage").classList.remove("hidden");
+    const p=d.post;
+    $("postDetail").innerHTML=`<div class="detail">
+      <img src="${p.image}" alt="">
+      <div class="detail-body">
+        <div class="category">${escapeHtml(p.category)}</div>
+        <h1>${escapeHtml(p.title)}</h1>
+        <div class="meta">By ${escapeHtml(p.author?.name||"Unknown")} • ${ago(p.createdAt)}</div>
+        <div class="article-content">${escapeHtml(p.content)}</div>
+        <div class="comments">
+          <h2>Comments (${d.comments.length})</h2>
+          ${user?`<form class="comment-form" onsubmit="addComment(event,'${p._id}')"><input id="commentText" placeholder="Write a comment..." required><button class="primary">Post</button></form>`:`<p class="muted">Login to join the conversation.</p>`}
+          <div>${d.comments.map(c=>`<div class="comment"><strong>${escapeHtml(c.author?.name||"User")}</strong><p>${escapeHtml(c.text)}</p>${user&&String(c.author?._id)===String(user.id)?`<button class="danger-link" onclick="deleteComment('${c._id}','${p._id}')">Delete</button>`:""}</div>`).join("")||'<p class="muted">No comments yet. Be the first!</p>'}</div>
+        </div>
+      </div>
+    </div>`;
+  }catch(e){toast(e.message)}
+}
+async function addComment(e,postId){
+  e.preventDefault();
+  try{await api("/comments",{method:"POST",body:JSON.stringify({postId,text:$("commentText").value})});toast("Comment added");openPost(postId)}
+  catch(e){toast(e.message)}
+}
+async function deleteComment(id,postId){
+  if(!confirm("Delete this comment?"))return;
+  try{await api(`/comments/${id}`,{method:"DELETE"});toast("Comment deleted");openPost(postId)}
+  catch(e){toast(e.message)}
+}
+function openAuth(){authMode="login";renderAuth();$("authModal").classList.remove("hidden")}
+function renderAuth(){
+  $("authTitle").textContent=authMode==="login"?"Login":"Create Account";
+  $("name").classList.toggle("hidden",authMode==="login");
+  $("authSwitch").textContent=authMode==="login"?"New here? Create an account":"Already have an account? Login";
+}
+$("authSwitch").onclick=()=>{authMode=authMode==="login"?"register":"login";renderAuth()};
+$("authForm").onsubmit=async e=>{
+  e.preventDefault();
+  try{
+    const body={email:$("email").value,password:$("password").value};
+    if(authMode==="register")body.name=$("name").value;
+    const d=await api(`/auth/${authMode}`,{method:"POST",body:JSON.stringify(body)});
+    token=d.token;user=d.user;localStorage.setItem("token",token);localStorage.setItem("user",JSON.stringify(user));
+    closeModal("authModal");refresh();toast("Welcome, "+user.name);loadPosts();
+  }catch(e){toast(e.message)}
+};
+function logout(){token="";user=null;localStorage.removeItem("token");localStorage.removeItem("user");refresh();home();toast("Logged out")}
+function openCreate(){openEditor()}
+function openEditor(p=null){
+  $("editorTitle").textContent=p?"Edit Post":"Create New Post";
+  $("editId").value=p?._id||"";
+  $("postTitle").value=p?.title||"";
+  $("postCategory").value=p?.category||"";
+  $("postImage").value=p?.image||"";
+  $("postContent").value=p?.content||"";
+  $("editorModal").classList.remove("hidden");
+}
+function editPost(p){openEditor(p)}
+$("postForm").onsubmit=async e=>{
+  e.preventDefault();
+  const id=$("editId").value;
+  const body={title:$("postTitle").value,category:$("postCategory").value,image:$("postImage").value||undefined,content:$("postContent").value};
+  try{
+    await api(id?`/posts/${id}`:"/posts",{method:id?"PUT":"POST",body:JSON.stringify(body)});
+    closeModal("editorModal");toast(id?"Post updated":"Post published");home();
+  }catch(e){toast(e.message)}
+};
+async function deletePost(id){
+  if(!confirm("Delete this post and its comments?"))return;
+  try{await api(`/posts/${id}`,{method:"DELETE"});toast("Post deleted");home()}catch(e){toast(e.message)}
+}
+refresh();loadPosts();
+
+================================================================================
+FILE: public/index.html
+================================================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThiraBlog | Blog Platform</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="header">
+  <a href="#" class="brand" onclick="home()"><span class="brand-icon">T</span> Thira<span>Blog</span></a>
+  <nav>
+    <button onclick="home()">Home</button>
+    <button onclick="openCreate()" id="writeBtn" class="hidden">Write</button>
+    <button onclick="openAuth()" id="loginBtn">Login</button>
+    <button onclick="logout()" id="logoutBtn" class="hidden">Logout</button>
+    <span id="userBadge" class="hidden"></span>
+  </nav>
+</header>
+
+<main>
+<section id="homePage">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">WRITE • SHARE • DISCOVER</div>
+      <h1>Ideas worth<br><span>sharing.</span></h1>
+      <p>A modern blogging platform where you can publish posts, start conversations and connect through comments.</p>
+      <button class="primary" onclick="scrollToPosts()">Explore Posts</button>
+    </div>
+    <div class="hero-art"><div class="paper">✍️</div><div class="bubble">💬</div></div>
+  </div>
+
+  <section class="content">
+    <div class="section-head">
+      <div><div class="eyebrow">LATEST STORIES</div><h2>Explore Posts</h2></div>
+      <input id="search" oninput="loadPosts()" placeholder="Search posts...">
+    </div>
+    <div id="posts" class="post-grid"></div>
+  </section>
+</section>
+
+<section id="detailPage" class="page hidden">
+  <button class="back" onclick="home()">← Back to posts</button>
+  <article id="postDetail"></article>
+</section>
+</main>
+
+<div id="authModal" class="modal hidden">
+ <div class="modal-box">
+  <button class="close" onclick="closeModal('authModal')">×</button>
+  <div class="eyebrow">THIRABLOG ACCOUNT</div>
+  <h2 id="authTitle">Login</h2>
+  <form id="authForm">
+   <input id="name" placeholder="Full name" class="hidden">
+   <input id="email" type="email" placeholder="Email address" required>
+   <input id="password" type="password" placeholder="Password" required>
+   <button class="primary full">Continue</button>
+  </form>
+  <p id="authSwitch" class="switch"></p>
+ </div>
+</div>
+
+<div id="editorModal" class="modal hidden">
+ <div class="modal-box wide">
+  <button class="close" onclick="closeModal('editorModal')">×</button>
+  <div class="eyebrow">CONTENT MANAGEMENT</div>
+  <h2 id="editorTitle">Create New Post</h2>
+  <form id="postForm">
+   <input type="hidden" id="editId">
+   <input id="postTitle" placeholder="Post title" required>
+   <input id="postCategory" placeholder="Category (e.g. Technology)" required>
+   <input id="postImage" placeholder="Image URL (optional)">
+   <textarea id="postContent" rows="10" placeholder="Write your story..." required></textarea>
+   <button class="primary full">Publish Post</button>
+  </form>
+ </div>
+</div>
+
+<div id="toast"></div>
+<footer>ThiraBlog • Full-Stack Blog Platform • Node.js • Express • MongoDB</footer>
+<script src="app.js"></script>
+</body>
+</html>
+
+================================================================================
+FILE: public/style.css
+================================================================================
+*{box-sizing:border-box}body{margin:0;background:#f7f9fd;color:#18253d;font-family:Inter,Arial,sans-serif}.header{height:76px;background:#fff;border-bottom:1px solid #e7ecf4;padding:0 7%;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}.brand{font-size:25px;font-weight:900;color:#1554c9;text-decoration:none}.brand span{color:#13a59c}.brand-icon{display:inline-grid!important;place-items:center;background:#1554c9;color:#fff!important;width:40px;height:40px;border-radius:12px;margin-right:8px}.header nav{display:flex;align-items:center;gap:5px}.header button{border:0;background:transparent;padding:10px 12px;color:#53627a;font-weight:800;cursor:pointer}.header button:hover{color:#1554c9}.header nav span{background:#eef5ff;color:#1554c9;padding:8px 12px;border-radius:20px;font-size:13px}.hero{max-width:1180px;margin:35px auto;padding:65px 70px;border-radius:30px;background:linear-gradient(135deg,#eaf2ff,#e8faf8);display:flex;justify-content:space-between;align-items:center}.eyebrow{color:#1554c9;font-size:12px;font-weight:900;letter-spacing:2px}.hero h1{font-size:58px;line-height:1;margin:12px 0}.hero h1 span{color:#1554c9}.hero p{font-size:18px;line-height:1.7;color:#68768e;max-width:600px}.primary{background:#1554c9;color:white;border:0;padding:13px 20px;border-radius:11px;font-weight:900;cursor:pointer}.hero-art{width:300px;height:250px;position:relative}.paper{position:absolute;left:40px;top:30px;width:190px;height:210px;background:#fff;border-radius:18px;box-shadow:0 20px 50px #1554c926;display:grid;place-items:center;font-size:70px;transform:rotate(-6deg)}.bubble{position:absolute;right:15px;bottom:15px;width:90px;height:90px;border-radius:50%;background:#1554c9;color:#fff;display:grid;place-items:center;font-size:35px}.content,.page{max-width:1180px;margin:45px auto}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:22px}.section-head h2{font-size:34px;margin:5px 0}.section-head input{width:280px;padding:13px 15px;border:1px solid #dbe3ee;border-radius:11px;background:#fff}.post-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.post-card{background:#fff;border:1px solid #e6ebf3;border-radius:18px;overflow:hidden;box-shadow:0 8px 25px #15253d0a;transition:.2s}.post-card:hover{transform:translateY(-3px);box-shadow:0 14px 35px #15253d15}.post-card img{width:100%;height:205px;object-fit:cover}.post-body{padding:20px}.category{font-size:11px;color:#1554c9;font-weight:900;text-transform:uppercase;letter-spacing:1px}.post-body h3{font-size:21px;line-height:1.3;margin:8px 0}.excerpt{color:#718097;line-height:1.6}.meta{font-size:12px;color:#8a96a8;margin-top:15px}.read{margin-top:14px;color:#1554c9;border:0;background:#edf4ff;padding:9px 12px;border-radius:9px;font-weight:800;cursor:pointer}.page{min-height:650px}.back{border:0;background:transparent;color:#1554c9;font-weight:800;cursor:pointer;margin-bottom:20px}.detail{background:#fff;border-radius:22px;overflow:hidden;border:1px solid #e5ebf3}.detail img{width:100%;height:360px;object-fit:cover}.detail-body{padding:35px;max-width:900px;margin:auto}.detail-body h1{font-size:44px;margin:10px 0}.article-content{white-space:pre-wrap;font-size:17px;line-height:1.9;color:#53627a}.comments{border-top:1px solid #e8edf4;margin-top:35px;padding-top:25px}.comment{padding:15px 0;border-bottom:1px solid #edf0f5}.comment strong{color:#17233c}.comment p{color:#617089}.comment-form{display:flex;gap:10px;margin-top:15px}.comment-form input{flex:1;padding:12px;border:1px solid #dce4ef;border-radius:10px}.modal{position:fixed;inset:0;background:#101a2b99;display:grid;place-items:center;z-index:50;padding:20px}.modal-box{background:#fff;border-radius:20px;width:min(440px,100%);padding:30px;position:relative;box-shadow:0 25px 80px #0004}.wide{width:min(700px,100%)}.modal-box h2{margin:8px 0 20px}.modal-box input,.modal-box textarea{width:100%;padding:13px;margin:7px 0;border:1px solid #dce4ef;border-radius:10px;font:inherit}.close{position:absolute;right:14px;top:9px;background:none;border:0;font-size:28px;color:#75839a;cursor:pointer}.full{width:100%;margin-top:10px}.switch{text-align:center;color:#1554c9;font-weight:700;cursor:pointer}.hidden{display:none!important}.empty{text-align:center;color:#8793a6;padding:55px;background:#fff;border-radius:16px}.danger-link{border:0;background:#fff0f0;color:#c62828;border-radius:8px;padding:6px 9px;cursor:pointer;margin-left:8px}.edit-link{border:0;background:#edf4ff;color:#1554c9;border-radius:8px;padding:6px 9px;cursor:pointer}#toast{position:fixed;bottom:22px;right:22px;background:#18253d;color:#fff;padding:13px 18px;border-radius:10px;display:none;z-index:70}footer{text-align:center;color:#8995a8;padding:40px;font-size:13px}@media(max-width:850px){.hero{margin:20px 3%;padding:40px 25px}.hero h1{font-size:45px}.hero-art{display:none}.content,.page{margin:35px 3%}.post-grid{grid-template-columns:1fr 1fr}.header{padding:0 3%}.header nav{overflow:auto}}@media(max-width:560px){.post-grid{grid-template-columns:1fr}.section-head{flex-direction:column;align-items:stretch}.section-head input{width:100%}.detail-body{padding:22px}.detail-body h1{font-size:32px}.detail img{height:230px}}
+
+================================================================================
+FILE: routes/auth.js
+================================================================================
+const router = require("express").Router();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const { protect } = require("../middleware/auth");
+
+const tokenFor = id => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+router.post("/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) return res.status(400).json({success:false,message:"All fields are required"});
+    if (password.length < 6) return res.status(400).json({success:false,message:"Password must be at least 6 characters"});
+    if (await User.findOne({ email })) return res.status(409).json({success:false,message:"Email already registered"});
+    const user = await User.create({ name, email, password: await bcrypt.hash(password, 10) });
+    res.status(201).json({success:true, token:tokenFor(user._id), user:{id:user._id,name:user.name,email:user.email}});
+  } catch(e) { res.status(500).json({success:false,message:e.message}); }
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({success:false,message:"Invalid email or password"});
+    }
+    res.json({success:true,token:tokenFor(user._id),user:{id:user._id,name:user.name,email:user.email}});
+  } catch(e) { res.status(500).json({success:false,message:e.message}); }
+});
+
+router.get("/me", protect, (req,res) => res.json({success:true,user:req.user}));
+
+module.exports = router;
+
+================================================================================
+FILE: routes/comments.js
+================================================================================
+const router = require("express").Router();
+const Comment = require("../models/Comment");
+const Post = require("../models/Post");
+const { protect } = require("../middleware/auth");
+
+router.post("/", protect, async (req,res) => {
+  try {
+    const { postId, text } = req.body;
+    if (!postId || !text?.trim()) return res.status(400).json({success:false,message:"Comment cannot be empty"});
+    if (!await Post.exists({_id:postId})) return res.status(404).json({success:false,message:"Post not found"});
+    const comment = await Comment.create({post:postId,author:req.user._id,text:text.trim()});
+    const populated = await Comment.findById(comment._id).populate("author","name");
+    res.status(201).json({success:true,comment:populated});
+  } catch(e) { res.status(400).json({success:false,message:e.message}); }
+});
+
+router.delete("/:id", protect, async (req,res) => {
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) return res.status(404).json({success:false,message:"Comment not found"});
+    if (String(comment.author) !== String(req.user._id)) return res.status(403).json({success:false,message:"You can delete only your own comment"});
+    await comment.deleteOne();
+    res.json({success:true,message:"Comment deleted"});
+  } catch(e) { res.status(400).json({success:false,message:e.message}); }
+});
+
+module.exports = router;
+
+================================================================================
+FILE: routes/posts.js
+================================================================================
+const router = require("express").Router();
+const Post = require("../models/Post");
+const Comment = require("../models/Comment");
+const { protect } = require("../middleware/auth");
+
+router.get("/", async (req,res) => {
+  try {
+    const search = req.query.search || "";
+    const filter = search ? { $or:[
+      {title:{$regex:search,$options:"i"}},
+      {content:{$regex:search,$options:"i"}},
+      {category:{$regex:search,$options:"i"}}
+    ]} : {};
+    const posts = await Post.find(filter).populate("author","name email").sort({createdAt:-1});
+    res.json({success:true,posts});
+  } catch(e) { res.status(500).json({success:false,message:e.message}); }
+});
+
+router.get("/:id", async (req,res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate("author","name email");
+    if (!post) return res.status(404).json({success:false,message:"Post not found"});
+    const comments = await Comment.find({post:post._id}).populate("author","name").sort({createdAt:-1});
+    res.json({success:true,post,comments});
+  } catch(e) { res.status(400).json({success:false,message:"Invalid post id"}); }
+});
+
+router.post("/", protect, async (req,res) => {
+  try {
+    const post = await Post.create({...req.body,author:req.user._id});
+    const populated = await Post.findById(post._id).populate("author","name email");
+    res.status(201).json({success:true,post:populated});
+  } catch(e) { res.status(400).json({success:false,message:e.message}); }
+});
+
+router.put("/:id", protect, async (req,res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({success:false,message:"Post not found"});
+    if (String(post.author) !== String(req.user._id)) return res.status(403).json({success:false,message:"You can edit only your own posts"});
+    Object.assign(post, req.body);
+    await post.save();
+    const populated = await Post.findById(post._id).populate("author","name email");
+    res.json({success:true,post:populated});
+  } catch(e) { res.status(400).json({success:false,message:e.message}); }
+});
+
+router.delete("/:id", protect, async (req,res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({success:false,message:"Post not found"});
+    if (String(post.author) !== String(req.user._id)) return res.status(403).json({success:false,message:"You can delete only your own posts"});
+    await post.deleteOne();
+    await Comment.deleteMany({post:post._id});
+    res.json({success:true,message:"Post deleted"});
+  } catch(e) { res.status(400).json({success:false,message:e.message}); }
+});
+
+module.exports = router;
+
+================================================================================
+FILE: seed.js
+================================================================================
+require("dotenv").config();
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const User = require("./models/User");
+const Post = require("./models/Post");
+const Comment = require("./models/Comment");
+
+async function seed() {
+  await mongoose.connect(process.env.MONGODB_URI);
+  await Comment.deleteMany({});
+  await Post.deleteMany({});
+  await User.deleteMany({});
+
+  const user = await User.create({
+    name:"Demo User",
+    email:"user@thirablog.com",
+    password:await bcrypt.hash("User@123",10)
+  });
+
+  const second = await User.create({
+    name:"Tech Writer",
+    email:"writer@thirablog.com",
+    password:await bcrypt.hash("Writer@123",10)
+  });
+
+  const posts = await Post.insertMany([
+    {
+      title:"How to Start Your Full-Stack Journey",
+      content:"Full-stack development becomes easier when you learn one layer at a time. Start with HTML, CSS and JavaScript, then move to Node.js, APIs and databases. Build small projects and keep improving them.",
+      category:"Web Development",
+      image:"https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+      author:user._id
+    },
+    {
+      title:"Why REST APIs Matter",
+      content:"REST APIs provide a clean way for a frontend to communicate with backend services. They use HTTP methods such as GET, POST, PUT and DELETE to manage resources.",
+      category:"Backend",
+      image:"https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80",
+      author:second._id
+    },
+    {
+      title:"MongoDB Basics for Beginners",
+      content:"MongoDB is a document-oriented database that stores flexible JSON-like records. With Mongoose, Node.js applications can define schemas and work with collections easily.",
+      category:"Database",
+      image:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+      author:user._id
+    }
+  ]);
+
+  await Comment.create([
+    {post:posts[0]._id,author:second._id,text:"Great beginner-friendly explanation!"},
+    {post:posts[1]._id,author:user._id,text:"REST makes frontend-backend integration much cleaner."}
+  ]);
+
+  console.log("Database seeded.");
+  console.log("User: user@thirablog.com / User@123");
+  console.log("Writer: writer@thirablog.com / Writer@123");
+  await mongoose.disconnect();
+}
+seed().catch(e=>{console.error(e);process.exit(1)});
+
+================================================================================
+FILE: server.js
+================================================================================
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const path = require("path");
+
+const authRoutes = require("./routes/auth");
+const postRoutes = require("./routes/posts");
+const commentRoutes = require("./routes/comments");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/api/health", (req, res) => {
+  res.json({ success: true, message: "ThiraBlog API is running" });
+});
+
+app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/comments", commentRoutes);
+
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/")) return res.status(404).json({ success:false, message:"API route not found" });
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("MongoDB connected");
+    app.listen(PORT, () => console.log(`ThiraBlog running at http://localhost:${PORT}`));
+  })
+  .catch(err => {
+    console.error("MongoDB connection failed:", err.message);
+    process.exit(1);
+  });
